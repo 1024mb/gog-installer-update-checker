@@ -57,12 +57,12 @@ def main():
                         action="version",
                         version=f"%(prog)s v{__version__}")
     parser.add_argument("--path",
-                        help="Path to GOG installers.",
+                        help="Path(s) to directories containing GOG installers.",
                         nargs="*",
                         required=True,
                         action="extend")
     parser.add_argument("--innoextract-path",
-                        help="Path to the innoextract executable.",
+                        help="Path to the innoextract executable. By default taken from PATH.",
                         nargs="?",
                         default=shutil.which("innoextract"))
     parser.add_argument("--output-file",
@@ -80,7 +80,7 @@ def main():
                         nargs="?",
                         default=None)
     parser.add_argument("--data-file",
-                        help="Path to the data file containing mappings of versions to consider equal. "
+                        help="Path to the data file. "
                              "By default data.json in the current working directory is loaded if found, "
                              "otherwise nothing.",
                         nargs="?",
