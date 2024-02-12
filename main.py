@@ -999,7 +999,7 @@ def compare_versions(local_info: dict,
     local_info = sort_local_info(local_info=local_info)
 
     print("")
-    for installer in sorted(local_info.keys()):
+    for installer in local_info.keys():
         logging.info(f"Comparing versions for {os.path.basename(installer)}...")
         if local_info[installer]["old_version"]:
             compare_old_versions(local_installer_info=local_info[installer],
