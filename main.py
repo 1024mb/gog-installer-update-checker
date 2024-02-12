@@ -456,8 +456,14 @@ def search_product_id_on_gog(product_name: str) -> Optional[str]:
         else:
             return None
 
+    if gog_info.get("totalGamesFound") == 1:
+        return str(gog_info["products"][0]["id"])
+
     for product in gog_info["products"]:
-        return str(product["id"])
+        if product_name.lower() == product["title"].lower():
+            return str(product["id"])
+
+    return None
 
 
 def get_exe_info(file_path: str) -> Optional[dict]:
