@@ -133,6 +133,8 @@ def main():
             logging.error(f"Path {path} is not a directory.")
             exit(1)
 
+    logging.info("Starting update checking...")
+
     set_data_content(data_file=data_file)
 
     start_processing(paths=paths,
@@ -289,10 +291,14 @@ def start_processing(paths: List[str],
                      new_versions_dict=new_versions_dict)
     logging.info("Finished comparing installer versions.")
 
-    if output_file is not None and len(new_versions_dict) > 0:
-        logging.info("Dumping installers with available updated versions to output file...")
-        write_installer_list(new_versions_dict=new_versions_dict,
-                             output_file=output_file)
+    if len(new_versions_dict) > 0:
+        if output_file is not None:
+            logging.info("Dumping installers with available updated versions to output file...")
+            write_installer_list(new_versions_dict=new_versions_dict,
+                                 output_file=output_file)
+            logging.info("Finished dumping installers.")
+        else:
+            logging.info("No output file set, list of updated installers wont be stored.")
     else:
         logging.info("No updated installers were found.")
 
@@ -309,8 +315,8 @@ def write_installer_list(new_versions_dict: dict,
     try:
         file_stream = open(output_file, "w", encoding="utf-8")
     except PermissionError as e:
-        logging.error("Couldn't open output file.")
-        logging.error(e)
+        logging.critical("Couldn't open output file.")
+        logging.critical(e)
         exit(1)
 
     for product_id in new_versions_dict.keys():
@@ -354,6 +360,8 @@ def map_product_id(installers_list: List[str],
                    innoextract_path: str) -> Dict[str, str]:
     mapping = {}
     for installer in sorted(installers_list):
+        logging.info(f"Retrieving product ID for {os.path.basename(installer)}...")
+
         product_id = get_product_id(installer_path=installer,
                                     innoextract_path=innoextract_path)
         basename = os.path.basename(installer)
@@ -380,8 +388,8 @@ def get_product_id(installer_path: str,
     try:
         output = subprocess.run(cmd, encoding="utf_8", capture_output=True, check=True).stdout.strip()
     except subprocess.CalledProcessError as e:
-        logging.error("Couldn't get the product id, there was an error executing innoextract.")
-        logging.error(f"ERROR:\n{e}")
+        logging.critical("Couldn't get the product id, there was an error executing innoextract.")
+        logging.critical(f"ERROR:\n{e}")
         exit(1)
 
     product_id = None
@@ -404,8 +412,8 @@ def get_product_id(installer_path: str,
 
     # try by retrieving the product name from the properties and searching it on GOG
 
-    logging.info("Could not find the product_id with innoextract. Falling to search for product name on GOG and "
-                 "retrieving the product_id from the response.")
+    logging.info("Could not find the product ID with innoextract. Falling to search for product name on GOG and "
+                 "retrieve the product ID from the response.")
 
     exe_info = get_exe_info(installer_path)
 
@@ -438,6 +446,8 @@ def get_product_id(installer_path: str,
 
 
 def search_product_id_on_gog(product_name: str) -> Optional[str]:
+    logging.info(f"Performing public search to get the product ID of {product_name}...")
+
     gog_url = "https://embed.gog.com/games/ajax/filtered?mediaType=game&search={0}"
     gog_info = download_data(gog_url=gog_url,
                              product_name=product_name)
@@ -453,17 +463,23 @@ def search_product_id_on_gog(product_name: str) -> Optional[str]:
                 product_name = product_name.replace(numeral, str(ROMAN_NUMERALS[numeral]))
 
         if found_numeral:
+            logging.info(f"Roman number found in \"{product_name}\", replacing with decimal equivalent and searching "
+                         f"again...")
             return search_product_id_on_gog(product_name)
         else:
+            logging.warning(f"No games found for {product_name}.")
             return None
 
     if gog_info.get("totalGamesFound") == 1:
+        logging.info(f"A single game found for {product_name}.")
         return str(gog_info["products"][0]["id"])
 
     for product in gog_info["products"]:
         if product_name.lower() == product["title"].lower():
+            logging.info(f"Product ID for {product_name} found.")
             return str(product["id"])
 
+    logging.warning(f"No games found for {product_name}.")
     return None
 
 
@@ -564,22 +580,30 @@ def insert_missing_info(installers_dict: dict,
     local_info = copy.deepcopy(installers_dict)
 
     for installer in sorted(installers_dict.keys()):
-        logging.info(f"Processing {installer}...")
+        basename = os.path.basename(installer)
+
+        logging.info(f"Processing \"{basename}\"...")
 
         if re.search(OLD_VERSION_REGEX, installer, re.IGNORECASE):
+            logging.info(f"\"{basename}\" detected as old gen.")
             old_installer = True
         else:
+            logging.info(f"\"{basename}\" detected as current gen.")
             old_installer = False
 
         product_id = installers_dict[installer]["product_id"]
 
-        logging.info("Starting extraction of info file from installer...")
+        logging.info("Retrieving installer information from file properties...")
 
         local_info.update(get_local_info_from_exe(file_path=installer,
                                                   old_installer=old_installer))
         local_info[installer].update({"product_id": product_id})
 
+        logging.info("Finished retrieving installer information from file properties.")
+
         tmp_dir = tempfile.mkdtemp()
+
+        logging.info("Starting extraction of info file from installer...")
 
         if old_installer:
             info_file = extract_info_file_old(product_id=product_id,
@@ -608,10 +632,13 @@ def insert_missing_info(installers_dict: dict,
         out_stream.close()
 
         logging.info("Checking for non-base game installer")
+
         if not is_main_game(installer_info=info_file_content):
             logging.info("Installer is not a base game installer, removing from update checking...")
             local_info.pop(installer)
             continue
+
+        logging.info("Filling all the missing info for the installer...")
 
         if old_installer:
             if local_info[installer].get("version_name") is None:
@@ -631,7 +658,7 @@ def insert_missing_info(installers_dict: dict,
                 try:
                     local_info[installer]["build_id"] = info_file_content["buildId"]
                 except KeyError:
-                    logging.info("\"buildId\" not found in info file and file properties.")
+                    logging.info("Build ID not found in info file and file properties.")
 
             if local_info[installer].get("version_name") is None:
                 logging.info("Trying to retrieve version_name from the filename...")
@@ -644,9 +671,14 @@ def insert_missing_info(installers_dict: dict,
             if info_file_content.get("name") is not None:
                 local_info[installer]["product_name"] = info_file_content["name"]
 
-        shutil.rmtree(tmp_dir)
+        logging.info("Finished filling missing info for the installer.")
 
-        logging.info(f"Finished processing {installer}.")
+        try:
+            shutil.rmtree(tmp_dir)
+        except (FileNotFoundError, PermissionError):
+            pass
+
+        logging.info(f"Finished processing \"{basename}\".")
 
     return copy.deepcopy(local_info)
 
@@ -875,7 +907,7 @@ def get_online_data(local_info) -> dict:
     for installer in sorted(local_info.keys()):
         basename = os.path.basename(installer)
 
-        logging.info(f"Downloading updated data for {basename}...")
+        logging.info(f"Downloading updated data for \"{basename}\"...")
 
         product_id = local_info[installer]["product_id"]
 
@@ -883,7 +915,7 @@ def get_online_data(local_info) -> dict:
                          online_info=online_info,
                          file_path=installer)
 
-        logging.info(f"Finished downloading data for {basename}.")
+        logging.info(f"Finished downloading data for \"{basename}\".")
 
     return copy.deepcopy(online_info)
 
@@ -891,7 +923,7 @@ def get_online_data(local_info) -> dict:
 def load_online_data(product_id: str,
                      online_info: dict,
                      file_path: str) -> None:
-    logging.info(f"Retrieving build information for {product_id}...")
+    logging.info(f"Retrieving latest build and version for {product_id}...")
 
     gog_url = "https://content-system.gog.com/products/{0}/os/windows/builds?generation=2"
 
@@ -943,16 +975,21 @@ def load_online_data(product_id: str,
                                    "build_id": last_legacy_build_id,
                                    "old_version": True}
 
+    logging.info("Finished retrieving latest build and version.")
+
 
 def download_data(gog_url: str,
                   product_id: str = None,
                   legacy_build_id: str = None,
                   product_name: str = None) -> Optional[dict]:
     if legacy_build_id is not None and product_id is not None:
+        logging.info(f"Downloading repository data for {product_id}...")
         gog_url = gog_url.format(product_id, legacy_build_id)
     elif product_name is not None:
+        logging.info(f"Downloading search data for {product_name}...")
         gog_url = gog_url.format(product_name)
     elif product_id is not None:
+        logging.info(f"Downloading game data for {product_id}...")
         gog_url = gog_url.format(product_id)
     else:
         raise ValueError("download_data() needs at least one of product_id or legacy_build_id or product_name.")
@@ -963,7 +1000,7 @@ def download_data(gog_url: str,
     api_response = sess.get(gog_url)
 
     if api_response.status_code != 200:
-        logging.error(f"There was an error downloading the information for: {product_id}")
+        logging.error(f"There was an error downloading the data for: {product_id}")
         logging.error(f"Status Code: {api_response.status_code}")
         return None
 
@@ -1030,7 +1067,7 @@ def compare_versions(local_info: dict,
 
     print("")
     for installer in local_info.keys():
-        logging.info(f"Comparing versions for {os.path.basename(installer)}...")
+        logging.info(f"Comparing versions for \"{os.path.basename(installer)}\"...")
         if local_info[installer]["old_version"]:
             compare_old_versions(local_installer_info=local_info[installer],
                                  online_info=online_info,
@@ -1116,7 +1153,7 @@ def compare_new_versions(local_installer_info: dict,
             logging.info("Online build is either older (which is highly unlikely) or same as local.")
     else:
         if local_version is None or local_version == UNKNOWN:
-            logging.error(f"Can't compare versions for {product_name} ({product_id}). There is at least one buildID "
+            logging.error(f"Can't compare versions for {product_name} ({product_id}). There is at least one build ID "
                           f"missing and local installer's version is also missing.")
             return
 
@@ -1288,7 +1325,7 @@ def compare_old_versions(local_installer_info: dict,
         else:
             logging.info("Online version is either older (which is highly unlikely) or same version as local.")
     else:
-        logging.info("Online installer is current version and local installer is old version, so is assumed an update "
+        logging.info("Online installer is current gen and local installer is old gen. Assuming an update "
                      "is available.")
 
         new_versions_dict[product_id] = {"product_name": product_name,
