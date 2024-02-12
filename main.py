@@ -41,6 +41,8 @@ global DATA_FILE_CONTENT
 global REPLACE_NAMES
 global MATCH_VERSIONS
 global ROMAN_NUMERALS
+global GOODIES_ID
+global DELISTED_GAMES
 
 
 # TODO:
@@ -153,6 +155,8 @@ def set_data_content(data_file: str) -> None:
     global REPLACE_NAMES
     global MATCH_VERSIONS
     global ROMAN_NUMERALS
+    global GOODIES_ID
+    global DELISTED_GAMES
 
     logging.info("Loading data file content...")
 
@@ -214,6 +218,28 @@ def set_data_content(data_file: str) -> None:
             logging.warning(f"Content type of \"Roman_Numerals\" is invalid, it should be a dict and currently is "
                             f"{type(DATA_FILE_CONTENT.get("Roman_Numerals"))}")
             ROMAN_NUMERALS = {}
+
+        # setup GOODIES_ID
+
+        if isinstance(DATA_FILE_CONTENT.get("Goodies_ID"), dict):
+            GOODIES_ID = DATA_FILE_CONTENT.get("Goodies_ID")
+        elif DATA_FILE_CONTENT.get("Goodies_ID") is None:
+            GOODIES_ID = {}
+        else:
+            logging.warning(f"Content type of \"Goodies_ID\" is invalid, it should be a dict and currently is "
+                            f"{type(DATA_FILE_CONTENT.get("Goodies_ID"))}")
+            GOODIES_ID = {}
+
+        # setup DELISTED_GAMES
+
+        if isinstance(DATA_FILE_CONTENT.get("Delisted_Games"), list):
+            DELISTED_GAMES = DATA_FILE_CONTENT.get("Delisted_Games")
+        elif DATA_FILE_CONTENT.get("Delisted_Games") is None:
+            DELISTED_GAMES = {}
+        else:
+            logging.warning(f"Content type of \"Delisted_Games\" is invalid, it should be a list and currently is "
+                            f"{type(DATA_FILE_CONTENT.get("Delisted_Games"))}")
+            DELISTED_GAMES = {}
     else:
         logging.info("No data file or data file empty, setting empty constants...")
 
@@ -221,6 +247,8 @@ def set_data_content(data_file: str) -> None:
         REPLACE_NAMES = {}
         MATCH_VERSIONS = {}
         ROMAN_NUMERALS = {}
+        GOODIES_ID = {}
+        DELISTED_GAMES = {}
 
 
 def start_processing(paths: List[str],
@@ -334,8 +362,6 @@ def map_product_id(installers_list: List[str],
             mapping[installer] = product_id
             logging.info(f"Product ID for {basename} retrieved successfully.")
             logging.info(f"Product ID: {product_id}")
-        else:
-            logging.warning(f"Couldn't get the product id for {basename}. Please report this.")
 
     return copy.deepcopy(mapping)
 
@@ -343,12 +369,13 @@ def map_product_id(installers_list: List[str],
 def get_product_id(installer_path: str,
                    innoextract_path: str) -> Optional[str]:
     global REPLACE_NAMES
+    global DELISTED_GAMES
 
-    file_path = installer_path
+    basename = os.path.basename(installer_path)
 
     cmd = [innoextract_path,
            "-l",
-           file_path]
+           installer_path]
 
     try:
         output = subprocess.run(cmd, encoding="utf_8", capture_output=True, check=True).stdout.strip()
@@ -380,10 +407,18 @@ def get_product_id(installer_path: str,
     logging.info("Could not find the product_id with innoextract. Falling to search for product name on GOG and "
                  "retrieving the product_id from the response.")
 
-    exe_info = get_exe_info(file_path)
+    exe_info = get_exe_info(installer_path)
 
     if exe_info is not None:
         product_name = exe_info.get("ProductName")
+
+        if product_name is None:
+            logging.warning(f"Couldn't get the product name & id for {basename}. Please report this.")
+            return None
+
+        if product_name in DELISTED_GAMES:
+            logging.info(f"Delisted game: {product_name}, skipping...")
+            return None
 
         for string in STR_TO_REMOVE_FROM_NAME:
             product_name = re.sub(string, "", product_name, flags=re.IGNORECASE)
@@ -394,6 +429,7 @@ def get_product_id(installer_path: str,
         while re.search(r"[a-zá-úñ]-", product_name, flags=re.IGNORECASE):
             product_name = re.sub(r"([a-zá-úñ])-\s", r"\1 - ", product_name, flags=re.IGNORECASE)
     else:
+        logging.warning(f"Couldn't get the product id for {basename}. Please report this.")
         return None
 
     product_id = search_product_id_on_gog(product_name=product_name)
@@ -427,7 +463,7 @@ def search_product_id_on_gog(product_name: str) -> Optional[str]:
 
 def get_exe_info(file_path: str) -> Optional[dict]:
     """
-    | Available keys (their value may or may not be empty):
+    | Available keys (their value may or may not be Nonetype):
 
     - *Comments*
     - *InternalName*
@@ -474,8 +510,9 @@ def get_exe_info(file_path: str) -> Optional[dict]:
                 value = win32api.GetFileVersionInfo(file_path, info_path).strip()
             except AttributeError:
                 value = win32api.GetFileVersionInfo(file_path, info_path)
-                if value is None:
-                    value = ""
+
+            if value == "":
+                value = None
 
             properties_dict[key] = value
 
@@ -758,6 +795,7 @@ def move_info_file_to_root(tmp_dir: str) -> None:
 
 
 def is_main_game(installer_info: dict) -> bool:
+    global GOODIES_ID
 
     if installer_info.get("dependencyGameId") is not None:
         if installer_info.get("dependencyGameId") != "":
@@ -765,6 +803,8 @@ def is_main_game(installer_info: dict) -> bool:
         else:
             return True
     elif installer_info.get("gameId") != installer_info.get("rootGameId"):
+        return False
+    elif str(installer_info.get("rootGameId")) in GOODIES_ID.keys():
         return False
     else:
         return True

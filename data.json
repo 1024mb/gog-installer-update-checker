@@ -44,5 +44,20 @@
     "XVIII": 18,
     "XIX": 19,
     "XX": 20
-  }
+  },
+  "Goodies_ID": {
+    "1825770152": "Yooka-Laylee Toybox"
+  },
+  "Delisted_Games": [
+    "Spelunky Classic",
+    "Duke Nukem 3D",
+    "The Chronicles of Riddick - Assault on Dark Athena",
+    "RollerCoaster Tycoon Deluxe",
+    "RollerCoaster Tycoon 2 Triple Thrill Pack",
+    "RollerCoaster Tycoon 3 Platinum",
+    "Scratches Director's Cut",
+    "Superfrog HD",
+    "Unreal Gold",
+    "Unreal Tournament GOTY"
+  ]
 }
