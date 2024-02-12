@@ -13,7 +13,6 @@ from datetime import datetime
 from hashlib import md5
 from typing import Dict, List, Optional
 
-import pefile
 import requests
 import win32api
 from errorhandler import ErrorHandler
