@@ -425,52 +425,6 @@ def search_product_id_on_gog(product_name: str) -> Optional[str]:
         return str(product["id"])
 
 
-def get_exe_info_pefile(file_path: str) -> Optional[dict]:
-    """
-    | Available keys (their value may or may not be empty):
-
-    - *Comments*
-    - *CompanyName*
-    - *FileDescription*
-    - *FileVersion*
-    - *LegalCopyright*
-    - *OriginalFileName*
-    - *ProductName*
-    - *ProductVersion*
-
-    :param file_path: Path to executable file.
-    :return: Dictionary with information about the executable file.
-    """
-    logging.info(f"Extracting information from executable file {os.path.basename(file_path)}...")
-
-    if global_exe_info.get(file_path, "") != "":
-        logging.info(f"Information for executable file: \"{file_path}\" was found, reusing...")
-        return copy.deepcopy(global_exe_info[file_path])
-
-    pe = pefile.PE(file_path)
-
-    info_dict = {}
-
-    if hasattr(pe, "VS_VERSIONINFO") and hasattr(pe, "FileInfo") and len(pe.FileInfo) > 0:
-        for item in pe.FileInfo[0]:
-            if hasattr(item, "StringTable"):
-                for dict_item in sorted(list(item.StringTable[0].entries.items())):
-                    key = dict_item[0].decode("utf_8", "backslashreplace").strip()
-                    value = dict_item[1].decode("utf_8", "backslashreplace").strip()
-
-                    info_dict[key] = value
-
-                global_exe_info[file_path] = info_dict
-
-                return copy.deepcopy(info_dict)
-    else:
-        logging.info("Couldn't get information about the executable file.")
-
-        global_exe_info[file_path] = None
-
-        return None
-
-
 def get_exe_info(file_path: str) -> Optional[dict]:
     """
     | Available keys (their value may or may not be empty):
