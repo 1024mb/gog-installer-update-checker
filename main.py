@@ -46,8 +46,8 @@ global DELISTED_GAMES
 
 # TODO:
 #  - Store API responses to use with get_local_version_from_gog() instead of re-downloading it.
-#  - Maybe add a function to retrieve account games for delisted games, mainly for old installers as we rely on public
-#    search to get their product ID.
+#  - Maybe add a function to retrieve account games for delisted games, mainly for old gen installers as we rely on
+#    public search to get their product ID.
 
 
 def main():
@@ -325,7 +325,7 @@ def write_installer_list(new_versions_dict: dict,
         file_stream.write(f"{product_name} ({product_id})" + "\n")
 
         if local_old_version and not online_old_version:
-            file_stream.write(f"{local_version} {{OLD INSTALLER}} -> {online_version}" + "\n")
+            file_stream.write(f"{local_version} {{OLD GEN INSTALLER}} -> {online_version}" + "\n")
         else:
             file_stream.write(f"{local_version} -> {online_version}" + "\n")
 
@@ -554,6 +554,11 @@ def dedup_installers_id(installers_dict: dict) -> Dict[str, Dict[str, str]]:
 
 def insert_missing_info(installers_dict: dict,
                         innoextract_path: str) -> dict:
+    """
+    Insert missing installer information into the installers_dict.
+
+    :return: A new dictionary containing the complete installer information
+    """
 
     local_info = copy.deepcopy(installers_dict)
 
@@ -591,6 +596,8 @@ def insert_missing_info(installers_dict: dict,
 
         logging.info("Finished extraction of info file.")
 
+        # When using 7-Zip to extract the info file, the file is extracted with the original directory structure which
+        # might be a subdirectory, in this case we have to move the info file to the root of the temporary directory.
         move_info_file_to_root(tmp_dir=tmp_dir)
 
         logging.info("Reading info file...")
@@ -719,7 +726,7 @@ def extract_info_file_old(product_id: str,
                           tmp_dir: str,
                           file_path: str) -> Optional[str]:
     """
-    Extract the info file from the given old installer to the specified temporary directory,
+    Extract the info file from the given old gen installer to the specified temporary directory,
     returning the name of the info file.
 
     :param product_id: ID of the product to extract the info from
@@ -800,6 +807,12 @@ def move_info_file_to_root(tmp_dir: str) -> None:
 
 
 def is_main_game(installer_info: dict) -> bool:
+    """
+    Detect if the installer belongs to a main game and not a DLC/Expansion/Goodie.
+
+    :param installer_info: Installer information
+    :return: Whether the installer belongs to a main game
+    """
     global GOODIES_ID
 
     if installer_info.get("dependencyGameId") is not None:
@@ -816,6 +829,13 @@ def is_main_game(installer_info: dict) -> bool:
 
 
 def get_old_version_from_filename(filename: str):
+    """
+    Try to extract the version from the filename for old gen installers.
+
+    :param filename: Filename where to extract the version from
+
+    :return: Version string if found, else *None*
+    """
     try:
         version_name = re.search(OLD_VERSION_REGEX, filename, re.IGNORECASE).groups()[0]
     except (AttributeError, IndexError):
@@ -826,6 +846,15 @@ def get_old_version_from_filename(filename: str):
 
 
 def get_version_from_filename(filename: str) -> Optional[str]:
+    """
+    | Try to extract the version from the filename.
+    | Versioning (at least in games) varies wildly, so it's extremely complicated to extract the correct version from
+        the filename, which is why this is the last option.
+
+    :param filename: Filename where to extract the version from
+
+    :return: Version string if found, else *None*
+    """
     try:
         version_name = re.search(EXTRACT_VERSION_REGEX, filename).groups()[0]
     except (AttributeError, IndexError, ValueError, TypeError):
@@ -899,7 +928,7 @@ def load_online_data(product_id: str,
                                    # old_version refers to the online installer version, not the game version
                                    "old_version": False}
     else:
-        logging.info("Only old installers are available for this game.")
+        logging.info("Only old gen installers are available for this game.")
 
         last_legacy_build_id = str(gog_dict["items"][0].get("legacy_build_id"))
 
@@ -1012,6 +1041,11 @@ def compare_versions(local_info: dict,
 
 
 def sort_local_info(local_info: dict) -> dict:
+    """
+    Sort installers by product_name
+
+    :returns: Sorted installers
+    """
     logging.info("Sorting local_info dict...")
 
     sorted_local_info = {}
@@ -1032,6 +1066,13 @@ def sort_local_info(local_info: dict) -> dict:
 def compare_new_versions(local_installer_info: dict,
                          online_info: dict,
                          new_versions_dict: dict) -> None:
+    """
+    Compare the local installer information and the online installer information for current gen installers.
+
+    :param local_installer_info: Local installer information
+    :param online_info: Online installer information
+    :param new_versions_dict: Dictionary where to store new versions
+    """
     product_id = local_installer_info["product_id"]
     product_name = local_installer_info["product_name"]
 
@@ -1137,6 +1178,8 @@ def versions_should_match(product_id: str,
 
 
 def normalize_version_name(version_name: str) -> str:
+    # This was done for the cases when the version has to be extracted from the filename where the online version might
+    # have some of these characters, but they are illegal in Windows so the extracted version won't have them
     illegal_characters = ("#", "!", "?", "\\", "/", "~", "|", "&", "$")
 
     new_version_name = version_name
@@ -1158,6 +1201,14 @@ def normalize_version_name(version_name: str) -> str:
 
 def get_local_version_from_gog(local_build: str,
                                product_id: str) -> Optional[str]:
+    """
+    Try to get the version of the local installer directly from GOG.
+
+    :param local_build: Build ID of the local installer
+    :param product_id: Product ID of the local installer
+
+    :return: Version of the local installer or *None* if no version could be found
+    """
 
     gog_url = "https://content-system.gog.com/products/{0}/os/windows/builds?generation=2"
 
@@ -1177,6 +1228,14 @@ def get_local_version_from_gog(local_build: str,
 def compare_old_versions(local_installer_info: dict,
                          online_info: dict,
                          new_versions_dict: dict) -> None:
+    """
+    Compare the local installer information -which is old gen- and the online installer information that might or might
+    not be old gen.
+
+    :param local_installer_info: Local installer information
+    :param online_info: Online installer information
+    :param new_versions_dict: Dictionary where to store new versions
+    """
     product_id = local_installer_info["product_id"]
     product_name = local_installer_info["product_name"]
 
@@ -1239,7 +1298,7 @@ def compare_old_versions(local_installer_info: dict,
                                          "online_build": online_build,
                                          "online_old_version": False}
 
-        print(f"{product_name} ({product_id}) : {local_version} {{OLD INSTALLER}} -> {online_version}")
+        print(f"{product_name} ({product_id}) : {local_version} {{OLD GEN INSTALLER}} -> {online_version}")
 
 
 if __name__ == '__main__':
