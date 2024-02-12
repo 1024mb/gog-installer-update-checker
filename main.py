@@ -72,7 +72,8 @@ def main():
     parser.add_argument("--log-level",
                         help="How much stuff is logged. Can be 'debug', 'info', 'warning', 'error'.",
                         default="warning",
-                        choices=["debug", "info", "warning", "error"])
+                        choices=["debug", "info", "warning", "error"],
+                        type=str.lower)
     parser.add_argument("--log-file",
                         help=f"Where to store the log file. Default: 'gog_installer_update_checker_{CURRENT_DATE}.log'"
                              f" in the current working directory.",
@@ -95,8 +96,6 @@ def main():
 
     log_file = args.log_file
 
-    error_handler = ErrorHandler(logging.ERROR)
-
     if log_file is None:
         log_file = os.path.join(os.getcwd(), f"gog_installer_update_checker_{CURRENT_DATE}.log")
     else:
@@ -108,9 +107,11 @@ def main():
     stdout_handler = logging.StreamHandler(stream=sys.stdout)
     handlers = [file_handler, stdout_handler]
 
-    log_level = args.log_level.upper()
+    log_level = logging.getLevelName(args.log_level.upper())
 
     logging.basicConfig(level=log_level, format="%(asctime)s %(levelname)s: %(message)s", handlers=handlers)
+
+    error_handler = ErrorHandler()
 
     if innoextract_path is None:
         logging.error("Innoextract not found in PATH and not specified. Exiting.")
