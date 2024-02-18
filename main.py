@@ -52,7 +52,7 @@ global DELISTED_GAMES
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="p",
+    parser = argparse.ArgumentParser(prog="gog-installer-update-checker",
                                      description="Check GOG installer for updates")
     parser.add_argument("-v", "--version",
                         action="version",
