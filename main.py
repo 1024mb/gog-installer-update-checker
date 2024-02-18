@@ -11,6 +11,7 @@ import sys
 import tempfile
 from datetime import datetime
 from hashlib import md5
+from sys import exit
 from typing import Dict, List, Optional
 
 import requests
@@ -51,7 +52,8 @@ global DELISTED_GAMES
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Check GOG installer for updates")
+    parser = argparse.ArgumentParser(prog="p",
+                                     description="Check GOG installer for updates")
     parser.add_argument("-v", "--version",
                         action="version",
                         version=f"%(prog)s v{__version__}")
@@ -75,8 +77,9 @@ def main():
                         choices=["debug", "info", "warning", "error"],
                         type=str.lower)
     parser.add_argument("--log-file",
-                        help=f"Where to store the log file. Default: 'gog_installer_update_checker_{CURRENT_DATE}.log'"
-                             f" in the current working directory.",
+                        help="Where to store the log file. "
+                             "Default: 'gog_installer_update_checker_{CURRENT_DATE}.log' "
+                             "in the current working directory.",
                         nargs="?",
                         default=None)
     parser.add_argument("--data-file",
