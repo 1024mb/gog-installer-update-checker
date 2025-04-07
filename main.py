@@ -188,7 +188,7 @@ def set_data_content(data_file: str) -> None:
             STR_TO_REMOVE_FROM_NAME = tuple()
         else:
             logging.warning(f"Content type of \"Strings_To_Remove\" is invalid, it should be a list and currently is "
-                            f"{type(DATA_FILE_CONTENT.get("Strings_To_Remove"))}")
+                            f"{type(DATA_FILE_CONTENT.get('Strings_To_Remove'))}")
             STR_TO_REMOVE_FROM_NAME = tuple()
 
         # setup REPLACE_NAMES
@@ -199,7 +199,7 @@ def set_data_content(data_file: str) -> None:
             REPLACE_NAMES = {}
         else:
             logging.warning(f"Content type of \"Replace_Names\" is invalid, it should be a dict and currently is "
-                            f"{type(DATA_FILE_CONTENT.get("Replace_Names"))}")
+                            f"{type(DATA_FILE_CONTENT.get('Replace_Names'))}")
             REPLACE_NAMES = {}
 
         # setup MATCH_VERSIONS
@@ -210,7 +210,7 @@ def set_data_content(data_file: str) -> None:
             MATCH_VERSIONS = {}
         else:
             logging.warning(f"Content type of \"Match_Versions\" is invalid, it should be a dict and currently is "
-                            f"{type(DATA_FILE_CONTENT.get("Match_Versions"))}")
+                            f"{type(DATA_FILE_CONTENT.get('Match_Versions'))}")
             MATCH_VERSIONS = {}
 
         # setup ROMAN_NUMERALS
@@ -221,7 +221,7 @@ def set_data_content(data_file: str) -> None:
             ROMAN_NUMERALS = {}
         else:
             logging.warning(f"Content type of \"Roman_Numerals\" is invalid, it should be a dict and currently is "
-                            f"{type(DATA_FILE_CONTENT.get("Roman_Numerals"))}")
+                            f"{type(DATA_FILE_CONTENT.get('Roman_Numerals'))}")
             ROMAN_NUMERALS = {}
 
         # setup GOODIES_ID
@@ -232,7 +232,7 @@ def set_data_content(data_file: str) -> None:
             GOODIES_ID = {}
         else:
             logging.warning(f"Content type of \"Goodies_ID\" is invalid, it should be a dict and currently is "
-                            f"{type(DATA_FILE_CONTENT.get("Goodies_ID"))}")
+                            f"{type(DATA_FILE_CONTENT.get('Goodies_ID'))}")
             GOODIES_ID = {}
 
         # setup DELISTED_GAMES
@@ -243,7 +243,7 @@ def set_data_content(data_file: str) -> None:
             DELISTED_GAMES = {}
         else:
             logging.warning(f"Content type of \"Delisted_Games\" is invalid, it should be a list and currently is "
-                            f"{type(DATA_FILE_CONTENT.get("Delisted_Games"))}")
+                            f"{type(DATA_FILE_CONTENT.get('Delisted_Games'))}")
             DELISTED_GAMES = {}
     else:
         logging.info("No data file or data file empty, setting empty constants...")
@@ -577,7 +577,9 @@ def dedup_installers_id(installers_dict: dict) -> Dict[str, Dict[str, str]]:
             for key in sorted(installers_dict.keys()):  # type: str
                 if installers_dict[key] == product_id:
                     found = True
-                    deduped_installers_dict_aux[key] = {"product_id": product_id}
+                    deduped_installers_dict_aux[key] = {
+                        "product_id": product_id
+                    }
                     break
 
     deduped_installers_dict = {}
@@ -616,7 +618,9 @@ def insert_missing_info(installers_dict: dict,
 
         local_info.update(get_local_info_from_exe(file_path=installer,
                                                   old_installer=old_installer))
-        local_info[installer].update({"product_id": product_id})
+        local_info[installer].update({
+            "product_id": product_id
+        })
 
         logging.info("Finished retrieving installer information from file properties.")
 
@@ -721,15 +725,17 @@ def get_local_info_from_exe(file_path: str,
     else:
         version_name = exe_info["ProductVersion"]
 
-    info_dict = {file_path: {
-        "build_id": build_id,
-        "product_name": product_name,
-        # old_version refers to the installer, not the game version.
-        "old_version": old_installer,
-        # If both local and online installers are old versions, we use the version name found in the filename to
-        # compare versions, so we have to retrieve and store this.
-        "version_name": version_name
-    }}
+    info_dict = {
+        file_path: {
+            "build_id": build_id,
+            "product_name": product_name,
+            # old_version refers to the installer, not the game version.
+            "old_version": old_installer,
+            # If both local and online installers are old versions, we use the version name found in the filename to
+            # compare versions, so we have to retrieve and store this.
+            "version_name": version_name
+        }
+    }
 
     return copy.deepcopy(info_dict)
 
@@ -953,9 +959,11 @@ def load_online_data(product_id: str,
                              gog_url=gog_url)
 
     if gog_dict is None:
-        online_info[product_id] = {"version_name": None,
-                                   "build_id": None,
-                                   "old_version": None}
+        online_info[product_id] = {
+            "version_name": None,
+            "build_id": None,
+            "old_version": None
+        }
         return
 
     if gog_dict["count"] == 0:
@@ -970,19 +978,23 @@ def load_online_data(product_id: str,
     if gog_dict["count"] == 0:
         logging.warning(f"Product \"{os.path.basename(file_path)}\" ({product_id}) build information wasn't found on "
                         f"GOG.")
-        online_info[product_id] = {"version_name": None,
-                                   "build_id": None,
-                                   "old_version": None}
+        online_info[product_id] = {
+            "version_name": None,
+            "build_id": None,
+            "old_version": None
+        }
         return
 
     if gog_dict["items"][0].get("legacy_build_id") is None:
         last_version = gog_dict["items"][0]["version_name"]
         last_build = gog_dict["items"][0]["build_id"]
 
-        online_info[product_id] = {"version_name": last_version,
-                                   "build_id": last_build,
-                                   # old_version refers to the online installer version, not the game version
-                                   "old_version": False}
+        online_info[product_id] = {
+            "version_name": last_version,
+            "build_id": last_build,
+            # old_version refers to the online installer version, not the game version
+            "old_version": False
+        }
     else:
         logging.info("Only old gen installers are available for this game.")
 
@@ -994,9 +1006,11 @@ def load_online_data(product_id: str,
         last_version = get_last_version_old_installer(last_legacy_build_id=last_legacy_build_id,
                                                       product_id=product_id)
 
-        online_info[product_id] = {"version_name": last_version,
-                                   "build_id": last_legacy_build_id,
-                                   "old_version": True}
+        online_info[product_id] = {
+            "version_name": last_version,
+            "build_id": last_legacy_build_id,
+            "old_version": True
+        }
 
     logging.info("Finished retrieving latest build and version.")
 
@@ -1018,7 +1032,9 @@ def download_data(gog_url: str,
         raise ValueError("download_data() needs at least one of product_id or legacy_build_id or product_name.")
 
     sess = requests.Session()
-    sess.headers.update({"User-Agent": USER_AGENT})
+    sess.headers.update({
+        "User-Agent": USER_AGENT
+    })
 
     api_response = sess.get(gog_url)
 
@@ -1120,7 +1136,9 @@ def sort_local_info(local_info: dict) -> dict:
     for prod_name in sorted(installer_name_map.keys()):
         installer = installer_name_map[prod_name]
 
-        sorted_local_info.update({installer: local_info[installer]})
+        sorted_local_info.update({
+            installer: local_info[installer]
+        })
 
     return copy.deepcopy(sorted_local_info)
 
@@ -1163,13 +1181,15 @@ def compare_new_versions(local_installer_info: dict,
             if local_version is None:
                 local_version = UNKNOWN
 
-            new_versions_dict[product_id] = {"product_name": product_name,
-                                             "local_version": local_version,
-                                             "local_build": local_build,
-                                             "local_old_version": False,
-                                             "online_version": online_version,
-                                             "online_build": online_build,
-                                             "online_old_version": False}
+            new_versions_dict[product_id] = {
+                "product_name": product_name,
+                "local_version": local_version,
+                "local_build": local_build,
+                "local_old_version": False,
+                "online_version": online_version,
+                "online_build": online_build,
+                "online_old_version": False
+            }
 
             print(f"{product_name} ({product_id}) : {local_version} ({local_build})"
                   f" -> {online_version} ({online_build})")
@@ -1192,13 +1212,15 @@ def compare_new_versions(local_installer_info: dict,
         if local_version_norm.lower() != online_version_norm.lower():
             logging.info("Online version is newer than local version, updated installer found!")
 
-            new_versions_dict[product_id] = {"product_name": product_name,
-                                             "local_version": local_version,
-                                             "local_build": local_build,
-                                             "local_old_version": False,
-                                             "online_version": online_version,
-                                             "online_build": online_build,
-                                             "online_old_version": False}
+            new_versions_dict[product_id] = {
+                "product_name": product_name,
+                "local_version": local_version,
+                "local_build": local_build,
+                "local_old_version": False,
+                "online_version": online_version,
+                "online_build": online_build,
+                "online_old_version": False
+            }
 
             print(f"{product_name} ({product_id}) : {local_version} ({local_build})"
                   f" -> {online_version} ({online_build})")
@@ -1339,13 +1361,15 @@ def compare_old_versions(local_installer_info: dict,
         if online_version != local_version:
             logging.info("Online version is newer than local version, updated installer found!")
 
-            new_versions_dict[product_id] = {"product_name": product_name,
-                                             "local_version": local_version,
-                                             "local_build": local_build,
-                                             "local_old_version": True,
-                                             "online_version": online_version,
-                                             "online_build": online_build,
-                                             "online_old_version": True}
+            new_versions_dict[product_id] = {
+                "product_name": product_name,
+                "local_version": local_version,
+                "local_build": local_build,
+                "local_old_version": True,
+                "online_version": online_version,
+                "online_build": online_build,
+                "online_old_version": True
+            }
 
             print(f"{product_name} ({product_id}) : {local_version} -> {online_version}")
         else:
@@ -1354,13 +1378,15 @@ def compare_old_versions(local_installer_info: dict,
         logging.info("Online installer is current gen and local installer is old gen. Assuming an update "
                      "is available.")
 
-        new_versions_dict[product_id] = {"product_name": product_name,
-                                         "local_version": local_version,
-                                         "local_build": local_build,
-                                         "local_old_version": True,
-                                         "online_version": online_version,
-                                         "online_build": online_build,
-                                         "online_old_version": False}
+        new_versions_dict[product_id] = {
+            "product_name": product_name,
+            "local_version": local_version,
+            "local_build": local_build,
+            "local_old_version": True,
+            "online_version": online_version,
+            "online_build": online_build,
+            "online_old_version": False
+        }
 
         print(f"{product_name} ({product_id}) : {local_version} {{OLD GEN INSTALLER}} -> {online_version}")
 
