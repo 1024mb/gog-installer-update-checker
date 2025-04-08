@@ -149,6 +149,12 @@ def main():
                              "appended to the name. Default is no output file.",
                         required=False,
                         type=str)
+    parser.add_argument("--data-file",
+                        help="Path to the data file. "
+                             "By default data.json in the app directory is loaded if found, "
+                             "otherwise nothing.",
+                        type=str,
+                        default=os.path.join(PROGRAM_DIR, "data.json"))
     parser.add_argument("--log-level",
                         help="How much stuff is logged. Can be 'debug', 'info', 'warning', 'error'.",
                         default="warning",
@@ -160,12 +166,6 @@ def main():
                              "directory.",
                         required=False,
                         type=str)
-    parser.add_argument("--data-file",
-                        help="Path to the data file. "
-                             "By default data.json in the app directory is loaded if found, "
-                             "otherwise nothing.",
-                        type=str,
-                        default=os.path.join(PROGRAM_DIR, "data.json"))
 
     args = parser.parse_args()
 
