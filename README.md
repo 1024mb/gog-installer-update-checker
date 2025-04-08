@@ -1,56 +1,62 @@
 # Check GOG offline installers for updated versions
 
-Python version required is 3.9+.
+Python version required is 3.10+.
 
 Dependencies
 -------------------------
 
 - [requests](https://github.com/psf/requests)
 - [pywin32](https://github.com/mhammond/pywin32)
-- [errorhandler](https://github.com/Simplistix/errorhandler)
+- [pydantic](https://github.com/pydantic/pydantic)
 - [innoextract](https://github.com/dscharrer/innoextract)
+- [7-zip](https://www.7-zip.org)
 
 Usage
 -------------------------
 
-```console
-usage: main.py [-h] [-v] --path [PATH ...]
-               [--innoextract-path [INNOEXTRACT_PATH]]
-               [--output-file [OUTPUT_FILE]]
-               [--log-level {debug,info,warning,error}]
-               [--log-file [LOG_FILE]] [--data-file [DATA_FILE]]
+```shell
+usage: gog-installer-update-checker [-h] [-v] --path PATH [PATH ...]
+                                    [--innoextract-path INNOEXTRACT_PATH]
+                                    [--seven-zip-path SEVEN_ZIP_PATH]
+                                    [--output-file OUTPUT_FILE]
+                                    [--data-file DATA_FILE]
+                                    [--log-level {debug,info,warning,error}]
+                                    [--log-file LOG_FILE]
 
 Check GOG installer for updates
 
 options:
   -h, --help            show this help message and exit
   -v, --version         show program's version number and exit
-  --path [PATH ...]     Path to GOG installers.
-  --innoextract-path [INNOEXTRACT_PATH]
+  --path PATH [PATH ...]
+                        Path(s) to directories containing GOG installers.
+  --innoextract-path INNOEXTRACT_PATH
                         Path to the innoextract executable. By default taken
                         from PATH.
-  --output-file [OUTPUT_FILE]
+  --seven-zip-path SEVEN_ZIP_PATH
+                        Path to the 7-zip executable. By default taken from
+                        PATH.
+  --output-file OUTPUT_FILE
                         Path to the file where the installers with found
                         updates will be listed. Current date is appended to
                         the name. Default is no output file.
+  --data-file DATA_FILE
+                        Path to the data file. By default data.json in the app
+                        directory is loaded if found, otherwise nothing.
   --log-level {debug,info,warning,error}
                         How much stuff is logged. Can be 'debug', 'info',
                         'warning', 'error'.
-  --log-file [LOG_FILE]
-                        Where to store the log file. Default:
-                        'gog_installer_update_checker_20240212_000845.log' in
+  --log-file LOG_FILE   Where to store the log file. Default:
+                        'gog_installer_update_checker_{CURRENT_DATE}.log' in
                         the current working directory.
-  --data-file [DATA_FILE]
-                        Path to the data file. By default data.json in the
-                        current working directory is loaded if found,
-                        otherwise nothing.
 ```
 
 - Multiple paths can be specified.
-- Innoextract is searched in PATH if not specified. It is required for this program to function.
-- If no output file is specified, installers that have updates won't be saved and the only place where they will be 
+- The app search for innoextract and 7z in PATH if they are not specified. They are required for this program to
+  function.
+- If no output file is specified, installers that have updates won't be stored and the only place where they will be
   available will be the console output.
-- Data file is not required, but without it, things won't go as good.
+- The data file is not required, but without it, things won't go as good.
 
 Datafile Content
 -------------------------
@@ -68,7 +74,7 @@ work. The data file may contain the following data:
 ### Match_Versions
 
 Used to force two versions of a specific game to be considered the same. The data type is a `dict` containing a `list`
-of `list`s.  
+of `tuple`s with two strings.  
 The structure is:
 
 ```json
